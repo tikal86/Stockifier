@@ -1,15 +1,13 @@
 const db = require('./js/database')
 const electron = require('electron')
-const Chart = require('chart.js')
+const Chart = require('/media/andre/Data/git/repo/Stockifier/node_modules/chart.js/dist/chart.umd')
 const BrowserWindow = electron.remote.BrowserWindow
 const path = require('path')
 const currencySymbol = require('currency-symbol-map')
 const ipc = electron.ipcRenderer;
 const ipcMain = electron.ipcMain;
 
-if (window.localStorage.getItem("apiKey") != null) {
-    window.stockapi = require('./js/stockapi');
-}
+window.stockapi = require('./js/stockapi');
 
 
 var stockMatches = []; //Global variable for stock matches
@@ -55,14 +53,18 @@ function sendNotification(title, body) {
         });
     })
 }
-function reloadWin() {
+export function reloadWin() {
     electron.remote.getCurrentWindow().reload();
 }
 
-function showNotificationWindow(ID) {
+export function showNotificationWindow(ID) {
+    console.log(`showNotificationWindow for ID ${ID}`);
     let options = {
         width: 650,
         height: 600,
+        webPreferences: {
+            nodeIntegration: true
+        },
         alwaysOnTop: true
     };
     let notifWinPath = path.join("file://", __dirname, "/notify.html")
@@ -75,6 +77,7 @@ function showNotificationWindow(ID) {
 
     if (ID) {
         notifWin.webContents.on('did-finish-load', () => {
+            console.log(`showNotificationWindow: sending data-notify-id for ID ${ID}`);
 
             notifWin.webContents.send('data-notify-id', ID);
         });
@@ -90,10 +93,16 @@ function openNotifWin(element) {
 
 }
 
-function showAnalyzeWindow() {
+window.openNotifWin = openNotifWin;
+
+export function showAnalyzeWindow() {
     let options = {
         width: 900,
-        height: 650
+        height: 650,
+        webPreferences: {
+            nodeIntegration: true
+        },
+
     };
     let analyzeWinPath = path.join("file://", __dirname, "/analyze.html")
     let analyzeWin = new BrowserWindow(options)
@@ -103,10 +112,13 @@ function showAnalyzeWindow() {
 }
 
 
-function showPredictWindow() {
+export function showPredictWindow() {
     let options = {
         width: 900,
-        height: 700
+        height: 700,
+        webPreferences: {
+            nodeIntegration: true
+        },
     };
     let predictWinPath = path.join("file://", __dirname, "/predict.html")
     let predictWin = new BrowserWindow(options)
@@ -116,28 +128,12 @@ function showPredictWindow() {
 
 }
 
-function setApiKey() {
-    $key = $('#txtApiKey').val();
-    if ($key == "") {
-        reloadWin();
-        return;
-    }
-    window.localStorage.apiKey = $key;
-    reloadWin();
-}
-
-/* Obtain AlphaVantage API Key */
-function openAPIWin() {
-    electron.shell.openExternal("https://www.alphavantage.co/support/#api-key");
-    return false;
-}
-
 /* Param: enabled 
 If true then desktop chime and notification is displayed */
 function loadNotifications(enabled) {
     let conn = db.conn;
 
-    get_notifications_qry = "SELECT Count(*) as count FROM Notifications";
+    var get_notifications_qry = "SELECT Count(*) as count FROM Notifications";
     conn.get(get_notifications_qry, (err, row) => {
 
         $('#notificationNumber').html(row.count);
@@ -259,21 +255,22 @@ function initalizeAlerts() {
     });
 }
 
-function normalize(val, min, max) {
-    return (val - min) / (max - min);
+function normalize(value, min, max) {
+    return (value - min) / (max - min);
 }
 function loadSpotlight(element, stockID) {
 
     openSnackbar("Loading data...")
-    $current = $('.stockSelected');
-    $current.removeClass('stockSelected');
+    var current = $('.stockSelected');
+    current.removeClass('stockSelected');
     $(element).addClass('stockSelected');
 
+    console.log(`loadSpotlight stockID ${stockID}`);
 
     let conn = db.conn;
     conn.get('SELECT * FROM Stocks WHERE "Index"=?', stockID, (err, row) => {
-        myChart.options.title.text = row.StockName;
-        myChart.options.scales.yAxes[0].scaleLabel.labelString = `Stock Price (${currencySymbol(row.Currency)})`;
+        myChart.config.options.title.text = row.StockName;
+        myChart.config.options.scales.y.title.text = `Stock Price (${currencySymbol(row.Currency)})`;
     });
     stockapi.getStockData(stockID, (data) => {
 
@@ -283,36 +280,37 @@ function loadSpotlight(element, stockID) {
         let volumes = data[2];
 
         /* Dynamic updation of chart */
-        myChart.data.labels = dates;
-        myChart.data.datasets[0].data = time_series_points;
-        myChart.data.datasets[1].data = volumes;
-        myChart.options.scales.xAxes[0].scaleLabel.labelString = `Time (UTC) (${dates[0].split(' ')[0]})`;
+        myChart.config.data.labels = dates;
+        myChart.config.data.datasets[0].data = time_series_points;
+        myChart.config.data.datasets[1].data = volumes;
+        myChart.config.options.scales.x.title.text = `Time (UTC) (${dates[0].split(' ')[0]})`;
 
         var latestPrice = time_series_points[time_series_points.length - 1];
         stockapi.getPreviousStockClose(stockID, (data) => {
-            prevClose = Array(dates.length);
+            let prevClose = Array(dates.length);
             prevClose.fill(Number(data));
             console.log(prevClose);
-            myChart.data.datasets[0].fill = true;
+            myChart.config.data.datasets[0].fill = true;
             if (latestPrice > prevClose[0]) {
-                myChart.data.datasets[0].borderColor = "rgba(34, 136, 14,1)";
-                myChart.data.datasets[0].backgroundColor = "rgba(128, 214, 111 ,0.4)";
-                myChart.data.datasets[1].backgroundColor = "rgba(20, 80, 8 ,0.8)";
+                myChart.config.data.datasets[0].borderColor = "rgba(34, 136, 14,1)";
+                myChart.config.data.datasets[0].backgroundColor = "rgba(128, 214, 111 ,0.4)";
+                myChart.config.data.datasets[1].backgroundColor = "rgba(20, 80, 8 ,0.8)";
 
             }
             else {
-                myChart.data.datasets[0].borderColor = "rgba(222, 16, 16,1)";
-                myChart.data.datasets[0].backgroundColor = "rgba(222, 16, 16,0.4)";
-                myChart.data.datasets[1].backgroundColor = "rgba(106, 21, 11,0.8)";
+                myChart.config.data.datasets[0].borderColor = "rgba(222, 16, 16,1)";
+                myChart.config.data.datasets[0].backgroundColor = "rgba(222, 16, 16,0.4)";
+                myChart.config.data.datasets[1].backgroundColor = "rgba(106, 21, 11,0.8)";
             }
 
-            myChart.data.datasets[2].data = prevClose;
+            myChart.config.data.datasets[2].data = prevClose;
             myChart.update();
         });
 
     });
 
 }
+window.loadSpotlight = loadSpotlight;
 
 /* Initialize Spotlight chart */
 var ctx = $("#myChart");
@@ -410,10 +408,11 @@ function updateStocks() {
 
 const sb = mdc.snackbar.MDCSnackbar.attachTo(document.querySelector('.mdc-snackbar'));
 function openSnackbar(snackbarMsg) {
-    $snackbar = $("#snackbar-msg");
-    $snackbar.text(snackbarMsg);
+    var snackbar = $("#snackbar-msg");
+    snackbar.text(snackbarMsg);
     sb.open();
 }
+window.openSnackbar = openSnackbar;
 
 /* Resize spotlight chart after window resize */
 $("#menu-toggle").click(function (e) {
@@ -435,21 +434,23 @@ $(document).ready(function () {
     $('#btnAddStock').on('click', () => {
 
         $('.dropdown').dropdown("toggle");
-        val = $('#typeahead').val();
-        if (val.includes('(') && val.includes(')')) {
-            stIndex = val.split('(')[1];
+        var stockName = $('#typeahead').val();
+        let conn = db.initDB();
+        if (stockName.includes('(') && stockName.includes(')')) {
+            var stIndex = stockName.split('(')[1];
             stIndex = stIndex.split(')')[0];
-            val = val.split('(')[0];
-            val = val.split(' ').splice(0, 1).join(" ");
-            let conn = db.initDB();
+            stockName = stockName.split('(')[0];
+            stockName = stockName.split(' ').splice(0, 1).join(" ");
+            console.log(`searching for name ${stockName} with ${stIndex}`);
 
-            stockapi.searchStock(val, (data) => {
-
+            stockapi.searchStock(stockName, (data) => {
+                console.log(`search stock ${stockName} response: ${data}`);
                 try {
                     data = JSON.parse(data).bestMatches;
 
                 } catch (error) {
-                    openSnackbar("An error occured");
+                    console.log(`An error occured while parsing json: ${error}`);
+                    openSnackbar("An error occured while parsing json, " + error);
                     return;
                 }
 
@@ -458,7 +459,7 @@ $(document).ready(function () {
 
                     if (element['1. symbol'] == stIndex) {
 
-                        insertStockQry = "INSERT INTO Stocks ('Stockname','Index','High','Low','Currency') VALUES ('" + element['2. name'] + "','" + stIndex + "',0,0,'" + element['8. currency'] + "')"
+                        var insertStockQry = "INSERT INTO Stocks ('Stockname','Index','High','Low','Currency') VALUES ('" + element['2. name'] + "','" + stIndex + "',0,0,'" + element['8. currency'] + "')";
 
                         conn.run(insertStockQry, (err) => {
                             if (err) console.log(err);
@@ -475,28 +476,41 @@ $(document).ready(function () {
         }
         else {
             try {
-                val = val.split(' ').splice(0, 1).join(" ");
+                stockName = stockName.split(' ').splice(0, 1).join(" ");
+                console.log(`searching for name ${stockName}`);
 
-                stockapi.searchStock(val, (data) => {
-
+                stockapi.searchStock(stockName, (data) => {
+                    console.log(`search stock ${stockName} response: ${data}`);
 
                     try {
-                        data = JSON.parse(data).bestMatches;
-
+                        var bestMatches = [];
+                        var parsedData = JSON.parse(data);
+                        if (parsedData.notes) {
+                            openSnackbar(`Message from source: ${parsedData.notes}`);
+                        } else {
+                            bestMatches = parsedData.bestMatches;
+                        }
                     } catch (error) {
-                        openSnackbar("An error occured");
+                        console.log(`An error occured while parsing json: ${error}`);
+                        openSnackbar("An error occured while parsing json, " + error);
                         return;
                     }
-                    data = data[0];
+                    if (bestMatches.length === 0) {
+                        openSnackbar(`No stock found with name: ${stockName}`);
+                    } else {
+                    // eigenlijk wil je hieruit kunnen kiezen
+                    var stockData = bestMatches[0];
 
-                    insertStockQry = "INSERT INTO Stocks ('Stockname','Index','High','Low','Currency') VALUES ('" + data['2. name'] + "','" + data['1. symbol'] + "',0,0,'" + data['8. currency'] + "')"
-                    conn.run(insertStockQry, (err) => {
-                        if (err) console.log(err);
-                        $('#typeahead').val('');
-                        openSnackbar("Stock Added!");
-                        initializeStockView();
-
-                    });
+                        var insertStockQry = "INSERT INTO Stocks ('Stockname','Index','High','Low','Currency') VALUES ('" + stockData['2. name'] + "','" + stockData['1. symbol'] + "',0,0,'" + stockData['8. currency'] + "')";
+                        console.log(`insertStockQry ${insertStockQry}`);
+                        conn.run(insertStockQry, (err) => {
+                            if (err) console.log(err);
+                            $('#typeahead').val('');
+                            openSnackbar("Stock Added!");
+                            initializeStockView();
+    
+                        });
+                    }
                 });
             } catch (error) {
                 alert("An error occured!" + error);
@@ -533,31 +547,22 @@ $(document).ready(function () {
         mdc.textField.MDCTextField.attachTo(tf);
     }
 
-    const apidialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('#apikeyDialog'));
-    $('#btnOpenKeyDialog').on('click', () => {
-        apidialog.open();
-    })
-    if (window.localStorage.getItem("apiKey") == null) {
-        apidialog.open();
-    }
-
-
 
     /* Alert Dialog */
     const dialog = mdc.dialog.MDCDialog.attachTo(document.querySelector('.mdc-dialog-deletediag'));
 
-    function openDeleteDialog(dialogTitle, dialogMsg, deleteID) {
-        $dialogTitle = $("#my-dialog-title");
-        $dialogmsg = $('#my-dialog-content');
-        $dialogTitle.text(dialogTitle);
-        $dialogmsg.text(dialogMsg);
+    function openDeleteDialog(dialogTitle, dialogMessage, deleteID) {
+        var dialogTitleElement = $("#my-dialog-title");
+        var dialogmsg = $('#my-dialog-content');
+        dialogTitleElement.text(dialogTitle);
+        dialogmsg.text(dialogMessage);
         dialog.open();
 
         dialog.listen('MDCDialog:closing', (action) => {
             let actionSel = action.detail.action;
             let conn = db.conn;
             if (actionSel == "yes") {
-                delStockQry = "DELETE FROM Stocks WHERE ID=?";
+                let delStockQry = "DELETE FROM Stocks WHERE ID=?";
                 conn.run(delStockQry, deleteID, (err) => {
                     if (err) {
                         return openSnackbar("Unable to delete!");
@@ -575,20 +580,21 @@ $(document).ready(function () {
         openDeleteDialog("Delete Stock", "Are you sure you want to delete the stock?", $(this).attr('data-delete-id'));
     });
 
-
+    $(document).on('click', "#showNotificationWindow", showNotificationWindow);
+    $(document).on('click', "#showAnalyzeWindow", showAnalyzeWindow);
+    $(document).on('click', "#showPredictWindow", showPredictWindow);
 
     /* Initialize stocks view */
     function initializeStockView() {
         let conn = db.initDB();
         console.log(conn);
-        $stocksList = $('#myStocks');
-        $stocksList.html('');
+        var stocksList = $('#myStocks');
+        stocksList.html('');
         conn.get("SELECT COUNT(*) as count FROM Stocks", (err, row) => {
             if (row.count > 0) {
                 conn.each("SELECT ID,\"Index\",StockName,High,Low,Currency FROM Stocks", function (err, row) {
-                    $stocksList.append(`
-            
-                                <li
+                    stocksList.append(`
+                                <li id="loadSpotlight"
                                     class="list-group-item list-group-item-action justify-content-center align-items-center" onclick='loadSpotlight(this,"`+ row.Index + `")'>
                                     <div class="mr-auto p-2" id="stockTitle"><b>`+ row.Index + `</b>
                                         <div class="badge badge-success badge-pill p-2 float-right">High: `+ currencySymbol(row.Currency) + row.High + `</div>
@@ -609,11 +615,10 @@ $(document).ready(function () {
                                     </div>
                                 </li>
                     `);
-
                 });
             }
             else {
-                $stocksList.html(`
+                stocksList.html(`
             
                     <li class="list-group-item justify-content-center align-items-center">
                         No stocks found!
@@ -631,10 +636,10 @@ $(document).ready(function () {
     initalizeAlerts();
 
     $("#txtStockSearch").on("keyup", function () {
-        var value = $(this).val().toLowerCase();
+        var stockName = $(this).val().toLowerCase();
 
         $("#myStocks li").filter(function () {
-            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            $(this).toggle($(this).text().toLowerCase().indexOf(stockName) > -1)
         });
     });
 });

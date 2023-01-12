@@ -7,6 +7,9 @@ function createWindow() {
 
     win = new BrowserWindow({
         width: 1200, height: 700,
+        webPreferences: {
+            nodeIntegration: true
+        },
         icon: path.join(__dirname, 'res', 'Stockifier.png')
     })
     win.setMinimizable(false);

@@ -1,3 +1,11 @@
+Forked:
+Updated to work with Node v17.1.0.
+Loads modules
+spotlight and analyze works
+notifications can be added
+Doesn't use local storage for alpha vantage key.
+Add you own alpha vantage key to stockapi.js
+
 # Stockifier ![Stockifier.png](./res/Stockifierlogo.png)
 ### A notification and insights app for stock markets
 

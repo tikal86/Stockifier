@@ -1,27 +1,31 @@
-const apiKey = window.localStorage.apiKey;
+const apiKey = '';
 const alpha = require('alphavantage')({ key: apiKey })
-const https = require('https')
+const https = require('https');
 
 function searchStock(stockName, callback) {
     let apiUrl = 'https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords=' + stockName + '&apikey=' + apiKey
     https.get(apiUrl, (res) => {
-        res.on('data', (data) => {
-            callback(data)
-        })
+        let rawData = '';
+        res.on('data', (chunk) => { rawData += chunk; });
+        res.on('end', () => {
+            callback(rawData)
+        });
     })
 }
 
 function getStockQuote(stockID, callback) {
     alpha.data.quote(stockID).then(data => {
         callback(data['Global Quote']['05. price'])
-    }).catch(err=>{
+    }).catch(err => {
+        console.error(err);
         openSnackbar('API timed out! Please try again in a few seconds....')
     });
 }
 function getPreviousStockClose(stockID, callback) {
     alpha.data.quote(stockID).then(data => {
         callback(data['Global Quote']['08. previous close'])
-    }).catch(err=>{
+    }).catch(err => {
+        console.error(err);
         openSnackbar('API timed out! Please try again in a few seconds....')
     });
 }
@@ -32,7 +36,6 @@ function getStockUpdates(stockID, callback) {
 }
 
 function getStockData(stockID, callback) {
-
 
     alpha.data.intraday(stockID, 'compact', 'json', '5min').then(data => {
 
@@ -55,7 +58,8 @@ function getStockData(stockID, callback) {
         console.log(dates.length);
         callback([dates.reverse(), prices.reverse(), volumes.reverse()])
 
-    }).catch(err=>{
+    }).catch(err => {
+        console.error(err);
         openSnackbar('API timed out! Please try again in a few seconds....')
     });
 }
@@ -67,9 +71,9 @@ function getStockPrices(stockID, interval, callback) {
 
             let keys = Object.keys(data);
             keys = keys.reverse()
-            let dates = [];
-            let prices = [];
-            let volumes = [];
+            var dates = [];
+            var prices = [];
+            var volumes = [];
             let i = 0
             for (const key of keys) {
                 if (i % 5 == 0) {
@@ -80,7 +84,8 @@ function getStockPrices(stockID, interval, callback) {
                 i += 1;
             }
             callback([prices, volumes, dates]);
-        }).catch(err=>{
+        }).catch(err => {
+            console.error(err);
             openSnackbar('API timed out! Please try again in a few seconds....')
         });
     } else if (interval == "week") {
@@ -100,7 +105,8 @@ function getStockPrices(stockID, interval, callback) {
                 i += 1;
             }
             callback([prices.reverse(), volumes.reverse(), dates.reverse()]);
-        }).catch(err=>{
+        }).catch(err => {
+            console.error(err);
             openSnackbar('API timed out! Please try again in a few seconds....')
         });
 
@@ -123,7 +129,8 @@ function getStockPrices(stockID, interval, callback) {
                 i += 1;
             }
             callback([prices.reverse(), volumes.reverse(), dates.reverse()]);
-        }).catch(err=>{
+        }).catch(err => {
+            console.error(err);
             openSnackbar('API timed out! Please try again in a few seconds....')
         });
 
@@ -147,7 +154,8 @@ function getStockPrices(stockID, interval, callback) {
             }
 
             callback([prices.reverse(), volumes.reverse(), dates.reverse()]);
-        }).catch(err=>{
+        }).catch(err => {
+            console.error(err);
             openSnackbar('API timed out! Please try again in a few seconds....')
         });
 
@@ -172,9 +180,10 @@ function getStockPrices(stockID, interval, callback) {
             }
             callback([prices, volumes, dates]);
 
-        }).catch(err=>{
+        }).catch(err => {
+            console.error(err);
             openSnackbar('API timed out! Please try again in a few seconds....')
-        });;
+        });
 
     }
 
@@ -182,6 +191,7 @@ function getStockPrices(stockID, interval, callback) {
 
 function getStockIndicator(stockID, indicator, callback) {
     if (indicator == "EMA") {
+        console.log(`getStockIndicator indicator: EMA`);
         alpha.technical.ema(stockID, 'weekly', 60, 'close').then(data => {
             data = data['Technical Analysis: EMA'];
             keys = Object.keys(data);
@@ -195,12 +205,17 @@ function getStockIndicator(stockID, indicator, callback) {
             }
             callback([prices, dates]);
             return;
-        }).catch(err=>{
+        }).catch(err => {
+            console.error(err);
             openSnackbar('API timed out! Please try again in a few seconds....')
         });
     } else if (indicator == "RSI") {
+        // Premium
+        console.log(`getStockIndicator indicator: RSI`);
         alpha.technical.rsi(stockID, 'weekly', 60, 'close').then(data => {
+            console.log(data);
             data = data['Technical Analysis: RSI'];
+            console.log(`getStockIndicator data ${data}`);
             keys = Object.keys(data);
             let i = 0;
             dates = [];
@@ -214,6 +229,7 @@ function getStockIndicator(stockID, indicator, callback) {
             return;
         })
     } else if (indicator == "SMA") {
+        console.log(`getStockIndicator indicator: SMA`);
         alpha.technical.sma(stockID, 'weekly', 60, 'close').then(data => {
             data = data['Technical Analysis: SMA'];
             keys = Object.keys(data);
@@ -233,8 +249,6 @@ function getStockIndicator(stockID, indicator, callback) {
 
 function getStockHistoricalDaily(stockID, callback) {
 
-
-
     alpha.data.daily_adjusted(stockID, 'full', 'json').then(data => {
         data = data['Time Series (Daily)'];
         let keys = Object.keys(data);
@@ -250,7 +264,8 @@ function getStockHistoricalDaily(stockID, callback) {
         }
         console.log(keys.length);
         callback([prices.reverse(), dates.reverse()]);
-    }).catch(err=>{
+    }).catch(err => {
+        console.error(err);
         openSnackbar('API timed out! Please try again in a few seconds....')
     });
 
@@ -274,10 +289,18 @@ function getDataForPrediction(stockID, callback) {
         }
 
         callback([prices.reverse(), dates.reverse()]);
-    }).catch(err=>{
+    }).catch(err => {
+        console.error(err);
         openSnackbar('API timed out! Please try again in a few seconds....')
     });
 
+}
+
+const sb = mdc.snackbar.MDCSnackbar.attachTo(document.querySelector('.mdc-snackbar'));
+function openSnackbar(snackbarMsg) {
+    var snackbar = $("#snackbar-msg");
+    snackbar.text(snackbarMsg);
+    sb.open();
 }
 
 module.exports = {

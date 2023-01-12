@@ -15,7 +15,6 @@
 
 <body>
 
-
     <div class="d-flex justify-content-center pb-2 m-2" style="color: rgba(0,0,0,0.8)">
         <h3>Analyze stock Performance</h3>
     </div>
@@ -23,8 +22,7 @@
         <div class="form-group">
             <div class="mdc-select w-100">
                 <i class="mdc-select__dropdown-icon"></i>
-                <select class="mdc-select__native-control" id="stocksList"
-                    onchange="updatePriceChart('min');updateSelected($('#btnSelectMin'))" required>
+                <select class="mdc-select__native-control" id="stocksList" required>
                     <option value="" disabled selected></option>
                 </select>
                 <label class="mdc-floating-label">Select Stock</label>
@@ -43,18 +41,13 @@
         <div class="tab-content" id="nav-tabContent">
             <div class="tab-pane fade show active" id="nav-price" role="tabpanel">
                 <div class="btn-group btn-group-sm mt-2 d-flex" role="group" aria-label="...">
-                    <button type="button" class="btn btn-time-range"
-                        onclick="updatePriceChart('min');updateSelected(this)" id="btnSelectMin">Min</button>
-                    <button type="button" class="btn btn-time-range"
-                        onclick="updatePriceChart('week');updateSelected(this)">1 week</button>
-                    <button type="button" class="btn btn-time-range"
-                        onclick="updatePriceChart('month');updateSelected(this)">1
+                    <button type="button"  id="btnSelectMin" class="btn btn-time-range">Min</button>
+                    <button type="button" id="weekTimeRange" class="btn btn-time-range">1 week</button>
+                    <button type="button" id="monthTimeRange" class="btn btn-time-range">1
                         month</button>
-                    <button type="button" class="btn btn-time-range"
-                        onclick="updatePriceChart('6months');updateSelected(this)">6
+                    <button type="button" id="month6TimeRange" class="btn btn-time-range">6
                         months</button>
-                    <button type="button" class="btn btn-time-range"
-                        onclick="updatePriceChart('max');updateSelected(this)">Max</button>
+                    <button type="button" id="maxTimeRange" class="btn btn-time-range">Max</button>
                 </div>
                 <canvas id="priceChart">
 
@@ -65,8 +58,7 @@
                 <div class="form-group">
                     <div class="mdc-select w-100">
                         <i class="mdc-select__dropdown-icon"></i>
-                        <select class="mdc-select__native-control" id="indicatorsList"
-                            onchange="updateIndicatorChart(this)" required>
+                        <select class="mdc-select__native-control" id="indicatorsList" required>
                             <option value="" disabled selected></option>
                             <option value="EMA">EMA - Exponential Moving Average</option>
                             <option value="RSI">RSI - Relative Strength Index</option>
@@ -83,7 +75,6 @@
             </div>
         </div>
 
-
     </div>
 
     <!-- Snackbar -->
@@ -99,8 +90,6 @@
     </div>
 
 
-
-
 </body>
 <script src="vendor/material-components-web.min.js"></script>
 <script src="vendor/jquery-3.2.1.slim.min.js"></script>
@@ -108,7 +97,6 @@
 <script src="vendor/popper.min.js"></script>
 <script src="vendor/bootstrap.min.js"></script>
 
-<script src="js/analyze.js"></script>
-
+<script type="module" src="js/analyze.js"></script>
 
 </html>

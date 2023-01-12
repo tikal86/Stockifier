@@ -31,11 +31,11 @@ function getStocks() {
 
 function updatePredictChart() {
 
-    $stock = $('#stocksList').val();
+    let stock = $('#stocksList').val();
     let conn = db.conn;
-    conn.get('SELECT * FROM Stocks WHERE "Index"=?', $stock, (err, row) => {
+    conn.get('SELECT * FROM Stocks WHERE "Index"=?', stock, (err, row) => {
         predictChart.options.title.text = row.StockName;
-        predictChart.options.scales.yAxes[0].scaleLabel.labelString = `Stock Price (${currencySymbol(row.Currency)})`;
+        predictChart.options.scales.price.title.text = `Stock Price (${currencySymbol(row.Currency)})`;
         predictChart.update();
         $('#currencySymbol').html(currencySymbol(row.Currency));
 
@@ -44,18 +44,18 @@ function updatePredictChart() {
 
     stockapi.getStockHistoricalDaily($stock, (data) => {
 
-        prices = data[0];
+        var prices = data[0];
         let min = Math.min.apply(null, prices);
         let max = Math.max.apply(null, prices);
         prices = prices.map((el) => minMaxScaler(el, min, max));
-        dates = data[1];
+        let dates = data[1];
         var lookbackPrices = [];
         var targets = [];
         for (let index = 10; index < prices.length; index++) {
             lookbackPrices[index - 10] = prices.slice(index - 10, index);
             targets.push(prices[index]);
         }
-        tfPrices = tf.tensor2d(lookbackPrices);
+        var tfPrices = tf.tensor2d(lookbackPrices);
         global.pred = tf.tensor2d(lookbackPrices[0], [1, 10]);
         global.pred = tf.reshape(global.pred, [1, 10, 1]);
         tfTargets = tf.tensor1d(targets);
@@ -67,15 +67,15 @@ function updatePredictChart() {
         const model = tf.sequential();
         model.add(tf.layers.lstm({ units: 32, inputShape: [10, 1] }));
         model.add(tf.layers.dense({ units: 1, activation: 'linear' }));
-        $lr = parseFloat($('#txtLearningRate').val());
-        const lr = $lr;
+        lr = parseFloat($('#txtLearningRate').val());
+        const lr = lr;
         const opt = tf.train.adam(lr);
         const loss = 'meanSquaredError';
         openSnackbar("Compiling model");
         model.compile({ optimizer: opt, loss: loss, metrics: ['mae', 'mse'] }); /* Using Mean Absolute Error as metrics for accuracy of model */
 
         async function fit() {
-            t = targets.map((el) => minMaxInverseScaler(el, min, max));
+            var t = targets.map((el) => minMaxInverseScaler(el, min, max));
             t = t.slice(t.length - 100, t.length);
             predictChart.data.labels = dates.slice(dates.length - 100, dates.length);
 
@@ -224,8 +224,8 @@ var predictChart = new Chart(ctx, {
 
 const sb = mdc.snackbar.MDCSnackbar.attachTo(document.querySelector('.mdc-snackbar'));
 function openSnackbar(snackbarMsg) {
-    $snackbar = $("#snackbar-msg");
-    $snackbar.text(snackbarMsg);
+    var snackbar = $("#snackbar-msg");
+    snackbar.text(snackbarMsg);
     sb.open();
 }
 
@@ -234,7 +234,7 @@ $(document).ready(function () {
     getStocks();
     window.startStop = 0;
     $('#startStopTraining').on('click', () => {
-        btn = $('#startStopTraining');
+        var btn = $('#startStopTraining');
         if (window.startStop == 0 && $('#stocksList').val() != null) {
             btn.removeClass('startTraining');
             btn.addClass('stopTraining');

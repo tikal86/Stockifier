@@ -7,20 +7,20 @@ const ipc = electron.ipcRenderer;
 
 
 function getStocks() {
-    $stocks = $('#stocksList');
+    let stocks = $('#stocksList');
     let conn = db.conn;
-
 
     conn.each('SELECT ID,"Index",StockName FROM Stocks', (err, row) => {
         if (err) {
             console.log(err);
         } else {
-            $stocks.append(`
+            stocks.append(`
                 <option value="`+ row['Index'] + `">` + row.StockName + ` - ` + row.Index + `</option>
             `);
         }
     });
 }
+
 function getAlerts(params) {
     let conn = db.conn;
     $('#alertsView').html('');
@@ -51,18 +51,21 @@ function getAlerts(params) {
         `);
     });
 }
+
 function getCurrentVal() {
-    $stock = $('#stocksList').val();
+    let stock = $('#stocksList').val();
+    console.log(`getCurrentVal for stock ${stock}`);
     let conn = db.conn;
     $('#txtStockVal').val("Loading")
-    conn.get('SELECT Currency FROM Stocks WHERE "Index"=?', $stock, (err, row) => {
+    conn.get('SELECT Currency FROM Stocks WHERE "Index"=?', stock, (err, row) => {
         let currency = row.Currency;
         $('#txtCurrencySymbol').html(currencySymbol(currency));
     });
-    stockapi.getStockQuote($stock, (price) => {
+    stockapi.getStockQuote(stock, (price) => {
         $('#txtStockVal').val(price)
     });
 }
+
 function deleteAlert(alertID) {
     let conn = db.conn;
     conn.run("DELETE FROM Alerts WHERE ID=?", alertID, (err) => {
@@ -80,29 +83,32 @@ function deleteAlert(alertID) {
 
 const sb = mdc.snackbar.MDCSnackbar.attachTo(document.querySelector('.mdc-snackbar'));
 function openSnackbar(snackbarMsg) {
-    $snackbar = $("#snackbar-msg");
-    $snackbar.text(snackbarMsg);
+    let snackbar = $("#snackbar-msg");
+    snackbar.text(snackbarMsg);
     sb.open();
     setTimeout(() => {
         sb.close()
     }, 5000);
 
 }
+
 function setNotification() {
 
-    $stock = $('#stocksList').val();
-    $currVal = Number($('#txtStockVal').val());
-    $newVal = $('#txtTargetVal').val();
-    $updateFreq = $('#txtFrequency').val();
-    $autoRenew = Number($('#chkAutoRenew').is(':checked'));
+    // waren dit global variabelen?
+    let stock = $('#stocksList').val();
+    let currVal = Number($('#txtStockVal').val());
+    let newVal = $('#txtTargetVal').val();
+    let updateFreq = $('#txtFrequency').val();
+    let autoRenew = Number($('#chkAutoRenew').is(':checked'));
     let conn = db.conn;
-    $btnBeat = Number($('#chkBeating').is(':checked'));
-    if ($btnBeat == 0) {
-        $beating = "down";
+    let btnBeat = Number($('#chkBeating').is(':checked'));
+    var beating = "";
+    if (btnBeat == 0) {
+        beating = "down";
     } else {
-        $beating = "up";
+        beating = "up";
     }
-    conn.get('SELECT ID FROM Stocks WHERE "Index"=?', $stock, (err, row) => {
+    conn.get('SELECT ID FROM Stocks WHERE "Index"=?', stock, (err, row) => {
 
         if (err) {
             openSnackbar(err);
@@ -110,12 +116,11 @@ function setNotification() {
 
         try {
 
-
             let stockID = row["ID"];
 
-            $alertQry = "INSERT INTO Alerts (StockID,TargetPrice,direction,Auto_Renew,frequency) Values(?,?,'" + $beating + "',?,?)";
+            let alertQry = "INSERT INTO Alerts (StockID,TargetPrice,direction,Auto_Renew,frequency) Values(?,?,'" + beating + "',?,?)";
 
-            conn.run($alertQry, [stockID, $newVal, $autoRenew, $updateFreq], (err) => {
+            conn.run(alertQry, [stockID, newVal, autoRenew, updateFreq], (err) => {
                 if (err) {
                     alert(err);
 
@@ -134,7 +139,6 @@ function setNotification() {
             getAlerts();
         }
 
-
     });
 
 
@@ -142,9 +146,11 @@ function setNotification() {
 }
 
 $(document).ready(function () {
+    console.log(`notif.js: $(document).ready`);
     getStocks();
 
     $('#closeWindow').on('click', () => {
+        console.log(`notif.js: closeWindow`);
         remote.getCurrentWindow().close();
     });
     getAlerts();
@@ -161,20 +167,26 @@ for (const button of buttons) {
     mdc.ripple.MDCRipple.attachTo(button);
 }
 
+$(document).on('change', "#stocksList", getCurrentVal);
+$(document).on('click', "#setNotification", setNotification);
+
 var select = mdc.select.MDCSelect.attachTo(document.querySelector('.mdc-select'));
 ipc.on('data-notify-id', function (event, arg) {
+    console.log(`showNotificationWindow: sending data-notify-id for ID ${arg}`);
     let ID = Number(arg);
-    $stocks = $('#stocksList');
+    window.stocks = $('#stocksList');
     let conn = db.conn;
     conn.get('SELECT ID,"Index",StockName FROM Stocks WHERE ID=?', ID, (err, row) => {
         if (err) {
             console.log(err);
         } else {
-            $stocks.html(`
+            console.log(`showNotificationWindow: adding option for  ${row.StockName}`);
+            window.stocks.html(`
                 <option value="`+ row['Index'] + `">` + row.StockName + ` - ` + row.Index + `</option>
             `);
         }
         select.selectedIndex = 0;
+        console.log(`showNotificationWindow: getCurrentVal for  ${row.StockName}`);
         getCurrentVal()
     })
 });
